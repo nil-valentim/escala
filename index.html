@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerador de Escala de Fim de Semana</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f7fa;
+    }
+
+    h1 {
+      color: #2c3e50;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    input, button {
+      margin: 6px 0;
+      padding: 6px;
+    }
+
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+      width: 100%;
+      max-width: 800px;
+      background: white;
+    }
+
+    th {
+      background: #2c3e50;
+      color: white;
+      padding: 8px;
+    }
+
+    td {
+      padding: 8px;
+      border: 1px solid #ccc;
+    }
+
+    tr:nth-child(even) {
+      background: #f2f2f2;
+    }
+
+    .linha-prova td {
+    background: #f9fbfd;
+    font-weight: bold;
+    }
+
+    footer {
+      margin-top: 40px;
+      padding: 15px;
+      text-align: center;
+      font-size: 14px;
+      color: #555;
+      background: #ecf0f1;
+      border-top: 1px solid #ccc;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Gerador de Escala de Fim de Semana</h1>
+
+  <label for="funcionarios">Funcionários (separados por vírgula):</label><br>
+  <input type="text" id="funcionarios" placeholder="Ex: Ana, João, Pedro"><br>
+
+  <label for="qtdSemanas">Quantos finais de semana gerar?</label><br>
+  <input type="number" id="qtdSemanas" value="4" min="1"><br>
+
+  <label for="dataInicial">Primeiro sábado da escala:</label><br>
+  <input type="date" id="dataInicial"><br><br>
+
+  <button onclick="gerarEscala()">Gerar escala completa</button>
+
+  <h2>Resultado</h2>
+
+  <table id="tabelaEscala">
+    <tr>
+      <th>Período</th>
+      <th>Funcionários</th>
+    </tr>
+  </table>
+
+<script>
+function gerarEscala() {
+
+  const texto = document.getElementById("funcionarios").value;
+  const qtdSemanas = Number(document.getElementById("qtdSemanas").value);
+  const dataInicialInput = document.getElementById("dataInicial").value;
+
+  if (!texto || !qtdSemanas || !dataInicialInput) {
+    alert("Preencha todos os campos.");
+    return;
+  }
+
+  let dataSabado = new Date(dataInicialInput + "T00:00:00");
+
+  // valida se é sábado (6)
+  if (dataSabado.getDay() !== 6) {
+    alert("A data inicial deve ser um sábado.");
+    return;
+  }
+
+  let funcionarios = texto
+    .split(",")
+    .map(n => n.trim())
+    .filter(n => n !== "");
+
+  if (funcionarios.length < 3) {
+    alert("É necessário no mínimo 3 funcionários.");
+    return;
+  }
+
+  let tabela = document.getElementById("tabelaEscala");
+  tabela.innerHTML = `
+    <tr>
+      <th>Período</th>
+      <th>Funcionários</th>
+    </tr>
+  `;
+
+  // contador de dias trabalhados
+  let contador = {};
+  funcionarios.forEach(f => contador[f] = 0);
+
+  let bloqueados = [];
+  let ponteiro = 0;
+
+  for (let semana = 1; semana <= qtdSemanas; semana++) {
+
+    let escala = [];
+
+    // prioridade: quem não trabalhou na semana anterior
+    let disponiveis = funcionarios.filter(
+      f => !bloqueados.includes(f)
+    );
+
+    // fallback para nunca parar a escala
+    while (escala.length < 3) {
+      let candidato;
+
+      if (disponiveis.length > 0) {
+        candidato = disponiveis.shift();
+      } else {
+        candidato = funcionarios[ponteiro % funcionarios.length];
+        ponteiro++;
+      }
+
+      if (!escala.includes(candidato)) {
+        escala.push(candidato);
+      }
+    }
+
+    let sabado = [escala[0], escala[1]];
+    let domingo = escala[2];
+
+    // contagem de dias
+    contador[sabado[0]]++;
+    contador[sabado[1]]++;
+    contador[domingo]++;
+
+    let dataDomingo = new Date(dataSabado);
+    dataDomingo.setDate(dataDomingo.getDate() + 1);
+
+    tabela.innerHTML += `
+      <tr>
+        <td>Sábado ${dataSabado.toLocaleDateString("pt-BR")}</td>
+        <td>${sabado.join(", ")}</td>
+      </tr>
+      <tr>
+        <td>Domingo ${dataDomingo.toLocaleDateString("pt-BR")}</td>
+        <td>${domingo}</td>
+      </tr>
+    `;
+
+    bloqueados = [...escala];
+
+    // próximo fim de semana
+    dataSabado.setDate(dataSabado.getDate() + 7);
+  }
+
+  // prova real em %
+  let totalDias = qtdSemanas * 2;
+
+  tabela.innerHTML += `
+    <tr>
+      <th colspan="2" class="titulo-prova">
+        📊 Percentual de Dias Trabalhados no Período
+      </th>
+    </tr>
+  `;
+
+  for (let f of funcionarios) {
+    let percentual = ((contador[f] / totalDias) * 100).toFixed(2);
+    tabela.innerHTML += `
+      <tr>
+        <td>${f}</td>
+        <td>${contador[f]} dias — ${percentual}%</td>
+      </tr>
+    `;
+  }
+}
+</script>
+
+<footer>
+  Desenvolvido pelo Estudante de Análise e Desenvolvimento de Sistemas<br>
+  <strong>Nilson José Valentim</strong>
+</footer>
+
+</body>
+</html>
